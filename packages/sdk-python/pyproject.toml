@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sentinel-sdk"
+name = "sentinel-llm"
 version = "0.1.0"
 description = "Drop-in observability and trust layer for AI pipelines and agents."
 readme = "README.md"

@@ -1,7 +1,8 @@
-# sentinel-sdk
+# sentinel-llm
 
 Drop-in observability and trust layer for AI pipelines and agents. Part of
-[Sentinel](https://github.com/SumanD18/sentinel).
+[Sentinel](https://github.com/SumanD18/sentinel). Installs as `sentinel-llm`,
+imports as `sentinel`.
 
 The SDK has **zero runtime dependencies** (standard library only) so it's safe to
 import into any process. It intercepts LLM calls, tool calls, and retrieval steps
@@ -11,9 +12,9 @@ collector.
 ## Install
 
 ```bash
-pip install sentinel-sdk
+pip install sentinel-llm
 # optional provider extras
-pip install "sentinel-sdk[openai]"      # or [anthropic], [otel]
+pip install "sentinel-llm[openai]"      # or [anthropic], [otel]
 ```
 
 ## Use

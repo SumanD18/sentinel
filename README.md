@@ -9,7 +9,7 @@
 [![CI](https://github.com/SumanD18/sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/SumanD18/sentinel/actions/workflows/ci.yml)
 [![Evals](https://github.com/SumanD18/sentinel/actions/workflows/evals.yml/badge.svg)](https://github.com/SumanD18/sentinel/actions/workflows/evals.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![PyPI](https://img.shields.io/badge/pypi-sentinel--sdk-3775A9.svg)](https://pypi.org/project/sentinel-sdk/)
+[![PyPI](https://img.shields.io/pypi/v/sentinel-llm.svg)](https://pypi.org/project/sentinel-llm/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#)
 [![Self-hostable](https://img.shields.io/badge/self--hostable-docker%20compose-2496ED.svg)](#quickstart)
 
@@ -18,6 +18,24 @@
 </div>
 
 ---
+
+## Demo
+
+<!-- Record a ~15s screen capture of the dashboard (trace waterfall + a flagged
+     hallucination + cost view), save it as docs/assets/demo.gif, then uncomment: -->
+<!-- <p align="center"><img src="docs/assets/demo.gif" alt="Sentinel dashboard: trace waterfall, cost, and trust scoring" width="840"></p> -->
+
+Spin up the whole stack and watch traces, cost, and trust scores populate live, no API keys required:
+
+```bash
+docker compose up --build                                   # dashboard :3000, collector :8000
+pip install -e packages/sdk-python
+python examples/quickstart/seed_demo.py                     # five demo traces
+```
+
+Open http://localhost:3000 for the trace waterfall, cost/latency overview, and an
+alert feed showing a flagged hallucination and a runaway-loop alert. The published
+SDK installs with `pip install sentinel-llm` (imports as `import sentinel`).
 
 ## The problem
 
