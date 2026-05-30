@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python (${{ matrix.package }} · py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+        package:
+          - packages/sdk-python
+          - packages/evaluators
+          - server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install
+        working-directory: ${{ matrix.package }}
+        run: |
+          python -m pip install --upgrade pip
+          # The server depends on the local evaluators package.
+          if [ "${{ matrix.package }}" = "server" ]; then
+            pip install ../packages/evaluators
+          fi
+          pip install -e ".[dev]"
+      - name: Lint (ruff)
+        working-directory: ${{ matrix.package }}
+        run: ruff check .
+      - name: Test
+        working-directory: ${{ matrix.package }}
+        run: pytest -q
+
+  typecheck-sdk:
+    name: Type-check SDK (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - working-directory: packages/sdk-python
+        run: |
+          pip install -e ".[dev]"
+          mypy sentinel
+
+  sdk-typescript:
+    name: TypeScript SDK (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - working-directory: packages/sdk-typescript
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npm test
+
+  dashboard:
+    name: Dashboard (build + lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - working-directory: dashboard
+        run: |
+          npm install --no-audit --no-fund
+          npm run lint
+          npm run build
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build server image
+        run: docker build -f server/Dockerfile -t sentinel/server:ci .
+      - name: Build dashboard image
+        run: docker build -f dashboard/Dockerfile -t sentinel/dashboard:ci .
+      - name: Smoke test the server image
+        run: |
+          docker run -d --name sentinel -p 8000:8000 sentinel/server:ci
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then echo "healthy"; exit 0; fi
+            sleep 1
+          done
+          echo "server did not become healthy"; docker logs sentinel; exit 1

@@ -1,0 +1,34 @@
+name: Evals
+
+# Runs the offline eval suite on every PR as a quality gate, and writes the
+# report to the job summary. No API keys required (scores recorded outputs).
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install evaluators
+        run: pip install ./packages/evaluators
+      - name: Run eval suite (gate at 60% pass rate)
+        run: |
+          python evals/run_evals.py \
+            --dataset evals/datasets/factual_qa.jsonl \
+            --name factual-qa \
+            --out evals/reports \
+            --fail-under 0.6 \
+            --min-pass-rate 0.6
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: evals/reports/
