@@ -7,7 +7,9 @@ from sentinel_evaluators.heuristics import (
     ConfidenceEvaluator,
     ContextGroundednessEvaluator,
     EmptyOutputEvaluator,
+    FactualityRegexEvaluator,
     RefusalEvaluator,
+    RepetitionEvaluator,
 )
 
 
@@ -51,6 +53,37 @@ def test_self_consistency_high_for_agreeing_samples():
         )
     )
     assert r.score > 0.3
+
+
+def test_repetition_detects_looping():
+    r = RepetitionEvaluator().evaluate(
+        EvalInput(output="go go go go go go go go go go")
+    )
+    assert r.score < 0.5
+    assert r.details["repetition_ratio"] > 0.5
+
+
+def test_repetition_clean_text():
+    r = RepetitionEvaluator().evaluate(
+        EvalInput(output="The quick brown fox jumps over the lazy dog easily.")
+    )
+    assert r.score > 0.7
+
+
+def test_factuality_flags_fabricated_url_and_year():
+    r = FactualityRegexEvaluator().evaluate(
+        EvalInput(output="See https://example.com/source published in 2750.")
+    )
+    assert r.score < 1.0
+    assert any("URL" in p or "year" in p for p in r.details["problems"])
+
+
+def test_factuality_clean():
+    r = FactualityRegexEvaluator().evaluate(
+        EvalInput(output="Water boils at 100 degrees Celsius at sea level.")
+    )
+    assert r.score == 1.0
+    assert r.details["problems"] == []
 
 
 def test_run_suite_and_aggregate():

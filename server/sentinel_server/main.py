@@ -9,13 +9,14 @@ Single FastAPI app exposing:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import metrics
+from . import metrics, retention
 from .config import get_settings
 from .db import init_db
 from .routes import alerts, prompts, stats, traces
@@ -32,18 +33,33 @@ logger = logging.getLogger("sentinel.server")
 async def lifespan(app: FastAPI):
     await init_db()
     logger.info(
-        "Sentinel server ready (db=%s, auth=%s, evaluators=%s)",
+        "Sentinel server ready (db=%s, auth=%s, evaluators=%s, retention_days=%d)",
         settings.database_url.split("://")[0],
         settings.auth_enabled,
         settings.enable_evaluators,
+        settings.retention_days,
     )
-    yield
+
+    # Start the retention sweep only when enabled (retention_days > 0).
+    stop = asyncio.Event()
+    retention_task: asyncio.Task | None = None
+    if settings.retention_days > 0:
+        retention_task = asyncio.create_task(
+            retention.retention_loop(stop, settings.retention_days)
+        )
+
+    try:
+        yield
+    finally:
+        if retention_task is not None:
+            stop.set()
+            await retention_task
 
 
 app = FastAPI(
     title="Sentinel",
     description="Open-source observability & trust layer for AI agents.",
-    version="0.1.0",
+    version="0.1.1",
     lifespan=lifespan,
 )
 

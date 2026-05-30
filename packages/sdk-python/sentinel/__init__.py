@@ -44,7 +44,7 @@ __all__ = [
     "Event",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 logger = logging.getLogger("sentinel")
 
@@ -54,6 +54,8 @@ _lock = threading.Lock()
 
 def init(
     config: SentinelConfig | None = None,
+    *,
+    exporter: Any = None,
     **kwargs: Any,
 ) -> Tracer:
     """Initialise the process-global tracer.
@@ -61,6 +63,10 @@ def init(
     Pass a :class:`SentinelConfig` or individual keyword overrides (e.g.
     ``endpoint``, ``service_name``, ``api_key``). Safe to call more than once;
     the previous tracer is shut down cleanly first.
+
+    Provide ``exporter`` to override where spans go (e.g. an
+    ``OTelExporter`` or a ``MultiExporter``); the default ships to the Sentinel
+    collector over HTTP.
     """
     global _default_tracer
     with _lock:
@@ -72,7 +78,7 @@ def init(
 
         if _default_tracer is not None:
             _default_tracer.shutdown()
-        _default_tracer = Tracer(config)
+        _default_tracer = Tracer(config, exporter=exporter)
         logger.debug(
             "sentinel initialised: service=%s endpoint=%s enabled=%s",
             config.service_name,

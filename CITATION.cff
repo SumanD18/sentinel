@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "Sentinel: observability and trust layer for AI agents"
+message: "If you use Sentinel in your research or product, please cite it."
+type: software
+authors:
+  - name: "The Sentinel Authors"
+repository-code: "https://github.com/SumanD18/sentinel"
+url: "https://github.com/SumanD18/sentinel"
+abstract: >-
+  Sentinel is an open-source, self-hostable observability and trust layer for
+  LLM pipelines and agents. It traces every prompt, tool call, and retrieval,
+  estimates cost, and scores outputs with local-first evaluators to flag
+  hallucinations, runaway loops, and silent failures.
+keywords:
+  - observability
+  - large language models
+  - ai agents
+  - tracing
+  - evaluation
+  - hallucination detection
+license: Apache-2.0
+version: 0.1.1
+date-released: "2026-05-31"

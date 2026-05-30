@@ -46,10 +46,12 @@ export class Tracer {
     kind: SpanKind,
     fn: (span: Span) => Promise<T> | T,
   ): Promise<T> {
-    if (this.config.sampleRate < 1 && Math.random() >= this.config.sampleRate) {
-      return await fn(new Span(name, kind));
-    }
     const span = this.startSpan(name, kind);
+    // Sampled out: still establish context (correct parent + trace id) so nested
+    // spans link up, but never export this span.
+    if (this.config.sampleRate < 1 && Math.random() >= this.config.sampleRate) {
+      return storage.run(span, () => fn(span));
+    }
     return storage.run(span, async () => {
       try {
         return await fn(span);

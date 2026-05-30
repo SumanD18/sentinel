@@ -76,6 +76,31 @@ sentinel.init(enabled=False)          # all spans become no-ops
 export SENTINEL_ENABLED=false
 ```
 
+## Exporters
+
+By default spans are batched and shipped to the Sentinel collector over HTTP.
+Override the destination with `exporter=`:
+
+```python
+from sentinel.exporters import OTelExporter
+
+# OpenTelemetry only (ships to OTEL_EXPORTER_OTLP_ENDPOINT, default :4318)
+sentinel.init(exporter=OTelExporter())
+
+# Both the collector and OpenTelemetry
+from sentinel import SentinelConfig
+from sentinel.exporter import HTTPExporter, MultiExporter
+
+cfg = SentinelConfig.from_env()
+sentinel.init(cfg, exporter=MultiExporter(HTTPExporter(cfg), OTelExporter()))
+```
+
+`OTelExporter` requires the optional extra (`pip install "sentinel-llm[otel]"`).
+LLM spans carry the OpenTelemetry GenAI semantic conventions (`gen_ai.system`,
+`gen_ai.request.model`, `gen_ai.usage.*`), and Sentinel trace/span ids are
+preserved so a trace lines up across both backends. You can also pass any OTel
+`SpanExporter` (e.g. `ConsoleSpanExporter`) as the first argument.
+
 ## Types
 
 `Span`, `SpanKind`, `SpanStatus`, `TokenUsage`, and `Event` are exported from the

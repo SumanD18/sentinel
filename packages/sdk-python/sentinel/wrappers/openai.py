@@ -136,7 +136,12 @@ def _wrap_sync_stream(stream: Any, span, tracer: Tracer):
             span.record_exception(exc)
             raise
         finally:
-            acc.finalize(span, tracer)
+            # Finalization must never prevent the span from being closed and
+            # exported, so guard the accumulator step separately.
+            try:
+                acc.finalize(span, tracer)
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("sentinel: stream finalize failed")
             tracer.end_span(span)
 
     return generator()
@@ -154,7 +159,10 @@ def _wrap_async_stream(stream: Any, span, tracer: Tracer):
             span.record_exception(exc)
             raise
         finally:
-            acc.finalize(span, tracer)
+            try:
+                acc.finalize(span, tracer)
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("sentinel: stream finalize failed")
             tracer.end_span(span)
 
     return generator()

@@ -27,7 +27,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </NavLink>
         ))}
         <div style={{ marginTop: "auto", color: "var(--muted)", fontSize: 12 }}>
-          v0.1.0 · self-hosted
+          v0.1.1 · self-hosted
         </div>
       </aside>
       <main className="main">{children}</main>

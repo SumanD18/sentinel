@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sentinel-server"
-version = "0.1.0"
+version = "0.1.1"
 description = "Sentinel collector and API server."
 readme = "README.md"
 requires-python = ">=3.10"

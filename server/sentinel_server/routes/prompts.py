@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select, update
+from sqlalchemy import case, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import require_api_key
@@ -24,15 +24,18 @@ async def _next_version(session: AsyncSession, name: str) -> int:
 
 
 async def _set_active(session: AsyncSession, name: str, version: int) -> None:
+    # Single atomic UPDATE: activate the target version and deactivate the rest
+    # in one statement, so two concurrent activations can't leave two versions
+    # active under read-committed isolation (e.g. Postgres).
     await session.execute(
         update(PromptVersion)
         .where(PromptVersion.name == name)
-        .values(is_active=False)
-    )
-    await session.execute(
-        update(PromptVersion)
-        .where(PromptVersion.name == name, PromptVersion.version == version)
-        .values(is_active=True)
+        .values(
+            is_active=case(
+                (PromptVersion.version == version, True),
+                else_=False,
+            )
+        )
     )
 
 

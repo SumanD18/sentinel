@@ -54,3 +54,28 @@ def make_trace(trace_id: str = "t1", output: str = "Paris is the capital of Fran
             }
         ],
     }
+
+
+def make_span_trace(trace_id: str, kind: str, output, input=None, status: str = "ok"):
+    """Build an ingestion payload with a single span of an arbitrary kind."""
+    return {
+        "service_name": "test-svc",
+        "environment": "test",
+        "spans": [
+            {
+                "name": f"{kind}-span",
+                "kind": kind,
+                "trace_id": trace_id,
+                "span_id": f"{trace_id}-s1",
+                "parent_span_id": None,
+                "start_time_ns": 1_000,
+                "end_time_ns": 2_000_000,
+                "duration_ms": 1.999,
+                "status": status,
+                "input": input,
+                "output": output,
+                "attributes": {},
+                "events": [],
+            }
+        ],
+    }

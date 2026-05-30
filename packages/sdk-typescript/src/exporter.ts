@@ -15,6 +15,15 @@ export interface SentinelConfig {
   sampleRate: number;
 }
 
+// Parse a numeric env var, falling back to `def` for missing/NaN/Infinity, then
+// clamp to [min, max] so a bad value can never disable batching or sampling.
+function numEnv(raw: string | undefined, def: number, min: number, max: number): number {
+  if (raw === undefined) return def;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return def;
+  return Math.min(max, Math.max(min, n));
+}
+
 export function configFromEnv(overrides: Partial<SentinelConfig> = {}): SentinelConfig {
   const env = process.env;
   return {
@@ -24,9 +33,9 @@ export function configFromEnv(overrides: Partial<SentinelConfig> = {}): Sentinel
     environment: env.SENTINEL_ENVIRONMENT ?? "development",
     enabled: (env.SENTINEL_ENABLED ?? "true") !== "false",
     captureContent: (env.SENTINEL_CAPTURE_CONTENT ?? "true") !== "false",
-    flushIntervalMs: Number(env.SENTINEL_FLUSH_INTERVAL_MS ?? 2000),
-    maxBatchSize: Number(env.SENTINEL_MAX_BATCH_SIZE ?? 256),
-    sampleRate: Number(env.SENTINEL_SAMPLE_RATE ?? 1.0),
+    flushIntervalMs: numEnv(env.SENTINEL_FLUSH_INTERVAL_MS, 2000, 100, 3_600_000),
+    maxBatchSize: numEnv(env.SENTINEL_MAX_BATCH_SIZE, 256, 1, 100_000),
+    sampleRate: numEnv(env.SENTINEL_SAMPLE_RATE, 1.0, 0, 1),
     ...overrides,
   };
 }
@@ -42,6 +51,7 @@ export class HttpExporter implements Exporter {
   private timer: ReturnType<typeof setInterval> | null = null;
   private readonly url: string;
   private shuttingDown = false;
+  private flushing = false;
 
   constructor(private readonly config: SentinelConfig) {
     this.url = config.endpoint.replace(/\/+$/, "") + "/v1/traces";
@@ -58,6 +68,19 @@ export class HttpExporter implements Exporter {
   }
 
   async flush(): Promise<void> {
+    // Serialize flushes: a timer tick and a batch-size trigger can otherwise
+    // race to splice the same queue. Re-run once if work arrived meanwhile.
+    if (this.flushing) return;
+    this.flushing = true;
+    try {
+      await this._flushOnce();
+    } finally {
+      this.flushing = false;
+    }
+    if (this.queue.length >= this.config.maxBatchSize) void this.flush();
+  }
+
+  private async _flushOnce(): Promise<void> {
     if (this.queue.length === 0) return;
     const batch = this.queue.splice(0, this.queue.length);
     const payload = {

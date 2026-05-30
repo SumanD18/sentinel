@@ -47,6 +47,33 @@ class NoopExporter(Exporter):
         return None
 
 
+class MultiExporter(Exporter):
+    """Fans a span out to several exporters (e.g. the collector + OpenTelemetry).
+
+    Each exporter is isolated: one failing never stops the others.
+    """
+
+    def __init__(self, *exporters: Exporter) -> None:
+        self._exporters = list(exporters)
+
+    def export(self, span: Span) -> None:
+        for exp in self._exporters:
+            try:
+                exp.export(span)
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("sentinel: exporter %r failed", exp)
+
+    def flush(self, timeout: float | None = None) -> bool:
+        return all(exp.flush(timeout) for exp in self._exporters)
+
+    def shutdown(self) -> None:
+        for exp in self._exporters:
+            try:
+                exp.shutdown()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("sentinel: exporter %r shutdown failed", exp)
+
+
 class ConsoleExporter(Exporter):
     """Pretty-prints spans to stdout. Handy for debugging without a collector."""
 
@@ -84,18 +111,23 @@ class HTTPExporter(Exporter):
     # -- public API ---------------------------------------------------------
 
     def export(self, span: Span) -> None:
-        if self._shutdown:
-            return
-        try:
-            self._queue.put_nowait(span)
-        except queue.Full:
-            # Never block the caller; account for the loss instead.
-            self._dropped += 1
-            if self._dropped % 100 == 1:
-                logger.warning(
-                    "sentinel export queue full; dropped %d spans so far",
-                    self._dropped,
-                )
+        # Hold the lock so the shutdown check and the enqueue are atomic with
+        # respect to shutdown(); otherwise a span enqueued just after the
+        # _SHUTDOWN sentinel could be lost in the final drain. put_nowait never
+        # blocks, so the lock is held only briefly.
+        with self._lock:
+            if self._shutdown:
+                return
+            try:
+                self._queue.put_nowait(span)
+            except queue.Full:
+                # Never block the caller; account for the loss instead.
+                self._dropped += 1
+                if self._dropped % 100 == 1:
+                    logger.warning(
+                        "sentinel export queue full; dropped %d spans so far",
+                        self._dropped,
+                    )
 
     def flush(self, timeout: float | None = None) -> bool:
         deadline_event = threading.Event()

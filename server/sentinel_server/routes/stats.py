@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import statistics
-
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,17 +42,27 @@ async def overview(session: AsyncSession = Depends(get_session)) -> StatsOvervie
         )
     ).scalar() or 0
 
-    trust_values = [
-        v
-        for (v,) in (await session.execute(select(Span.trust_score))).all()
-        if v is not None
-    ]
-    mean_trust = round(statistics.mean(trust_values), 4) if trust_values else 1.0
+    # Mean trust is aggregated in the database so we never pull every span row.
+    mean_trust_raw = (
+        await session.execute(
+            select(func.avg(Span.trust_score)).where(Span.trust_score.is_not(None))
+        )
+    ).scalar()
+    mean_trust = round(float(mean_trust_raw), 4) if mean_trust_raw is not None else 1.0
 
+    # Percentiles need the raw values, so bound the scan to the most recent
+    # traces rather than loading the entire table into memory.
+    _DURATION_SAMPLE = 20_000
     durations = [
         d
-        for (d,) in (await session.execute(select(Trace.duration_ms))).all()
-        if d is not None
+        for (d,) in (
+            await session.execute(
+                select(Trace.duration_ms)
+                .where(Trace.duration_ms.is_not(None))
+                .order_by(Trace.created_at.desc())
+                .limit(_DURATION_SAMPLE)
+            )
+        ).all()
     ]
 
     cost_rows = (

@@ -41,3 +41,25 @@ def test_redact_nested_structure():
     assert "[REDACTED:SSN]" in out["messages"][0]["content"]
     # Structure preserved, original untouched.
     assert payload["messages"][0]["content"] == "ssn 123-45-6789"
+
+
+def test_redact_phone():
+    out = redact_text("call me at (555) 123-4567 tomorrow")
+    assert "[REDACTED:PHONE]" in out
+    assert "123-4567" not in out
+
+
+def test_redact_ipv4():
+    out = redact_text("client ip was 192.168.10.42 at noon")
+    assert "[REDACTED:IPV4]" in out
+    assert "192.168.10.42" not in out
+
+
+def test_redact_credit_card():
+    out = redact_text("card 4242 4242 4242 4242 charged")
+    assert "[REDACTED:CREDIT_CARD]" in out
+
+
+def test_redact_bearer_token():
+    out = redact_text("Authorization: Bearer abcDEF123456ghijklmnop")
+    assert "[REDACTED:BEARER]" in out

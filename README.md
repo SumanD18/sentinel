@@ -65,8 +65,9 @@ entirely on your infrastructure. No data leaves your network.
   and no API key required.** Hallucinations get flagged automatically.
 - **Self-hostable in one command.** `docker compose up`. SQLite by default,
   Postgres when you scale. Your prompts and responses never leave your box.
-- **OpenTelemetry-native.** Export to Grafana, Datadog, or any OTel backend.
-  Prometheus metrics endpoint included.
+- **OpenTelemetry-native.** Ship spans to any OTLP backend (Grafana Tempo,
+  Datadog, Honeycomb, an OTel Collector) via the built-in `OTelExporter`, with
+  GenAI semantic conventions (`gen_ai.*`). Prometheus `/metrics` included.
 - **Zero overhead on your hot path.** Spans are batched and shipped on a
   background thread. If the collector is down, your app doesn't care.
 
@@ -134,11 +135,11 @@ Streaming, async clients, and Anthropic work identically. See
 | **Universal interceptor** | `sentinel.wrap()` any client; `@sentinel.trace` any function. Sync, async, and streaming. |
 | **Trace waterfall** | Jaeger-style view of every agent run. Each node is an LLM call, tool, or retrieval, with latency, tokens, and cost. |
 | **Trust scoring** | Local evaluators (confidence, groundedness, repetition, refusal, factuality) score every output. Hallucinations get flagged. |
-| **Guardrails and alerts** | Pluggable Python rules: block on PII, detect prompt injection / context poisoning, trip a circuit breaker on runaway loops. |
+| **Guardrails and alerts** | Pluggable Python rules: detect secret leaks, prompt injection / context poisoning, low-trust outputs, and runaway loops, raising alerts. PII is redacted in the SDK before egress. |
 | **Prompt registry** | Git-like versioning for prompts with instant rollback and per-version metrics. |
 | **Cost and token tracking** | Per-step and per-model cost estimation with an overridable pricing table. |
 | **Evals framework** | Run datasets against any model/prompt, compare head-to-head, gate CI on pass rate. Markdown + JSON reports. |
-| **OpenTelemetry and Prometheus** | Standard LLM span conventions; `/metrics` endpoint for Grafana/Datadog. |
+| **OpenTelemetry and Prometheus** | `OTelExporter` ships spans to any OTLP backend using GenAI (`gen_ai.*`) conventions; `/metrics` endpoint for Grafana/Datadog. |
 | **Privacy-first** | PII redaction *before* data leaves your process. Self-hosted. Optional API-key auth. |
 
 ## Architecture

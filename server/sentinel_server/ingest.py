@@ -210,7 +210,13 @@ async def _recompute_trace(
 ) -> None:
     starts = [s.start_time_ns for s in spans if s.start_time_ns is not None]
     ends = [s.end_time_ns for s in spans if s.end_time_ns is not None]
-    root = min(spans, key=lambda s: s.start_time_ns, default=None)
+    # Pick the earliest-starting span as the root; guard against any span that
+    # somehow arrived without a start time so min() never compares None to int.
+    root = min(
+        (s for s in spans if s.start_time_ns is not None),
+        key=lambda s: s.start_time_ns,
+        default=None,
+    )
     trust_scores = [s.trust_score for s in spans if s.trust_score is not None]
 
     # Query open alerts *before* touching the Trace row, so autoflush never

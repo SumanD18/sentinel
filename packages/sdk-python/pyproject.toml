@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sentinel-llm"
-version = "0.1.0"
+version = "0.1.1"
 description = "Drop-in observability and trust layer for AI pipelines and agents."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -38,6 +38,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "mypy>=1.8",
     "ruff>=0.3",
+    "opentelemetry-sdk>=1.20",
 ]
 
 [project.urls]
