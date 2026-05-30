@@ -1,0 +1,79 @@
+name: Demo GIF
+
+# Re-records docs/assets/demo.gif against the live dashboard whenever a release
+# is published (or on demand), and commits the refreshed GIF back to main.
+# Pure-JS capture (Playwright + gifenc); no ffmpeg.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# Avoid overlapping captures racing to push.
+concurrency:
+  group: demo-gif
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install ./packages/evaluators
+          pip install -e ./packages/sdk-python
+          pip install ./server
+
+      - name: Install dashboard deps
+        working-directory: dashboard
+        run: npm install --no-audit --no-fund
+
+      - name: Install capture deps + Chromium
+        working-directory: tools/demo-capture
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Render demo GIF
+        run: |
+          set -e
+          export SENTINEL_DATABASE_URL="sqlite+aiosqlite:///$GITHUB_WORKSPACE/demo_gif.db"
+          python -m uvicorn sentinel_server.main:app --port 8000 --log-level warning &
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/health >/dev/null && break; sleep 1; done
+          SENTINEL_ENDPOINT=http://localhost:8000 python examples/quickstart/seed_demo.py
+          ( cd dashboard && npx vite --port 5173 --strictPort & )
+          for i in $(seq 1 40); do curl -sf http://localhost:5173 >/dev/null && break; sleep 1; done
+          cd tools/demo-capture
+          DASH_URL=http://localhost:5173 \
+          API_URL=http://localhost:8000 \
+          OUT="$GITHUB_WORKSPACE/docs/assets/demo.gif" \
+            node capture.mjs
+
+      - name: Commit refreshed GIF
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if git diff --quiet -- docs/assets/demo.gif; then
+            echo "Demo GIF unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/demo.gif
+          git commit -m "docs: auto-refresh demo GIF for ${TAG:-manual run}"
+          git push origin HEAD:main
