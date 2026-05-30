@@ -44,3 +44,6 @@ evals/reports/
 *.tsbuildinfo
 dashboard/vite.config.js
 dashboard/vite.config.d.ts
+
+# Local GIF capture scratch (not part of the project)
+.capture/

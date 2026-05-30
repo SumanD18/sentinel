@@ -21,9 +21,9 @@
 
 ## Demo
 
-<!-- Record a ~15s screen capture of the dashboard (trace waterfall + a flagged
-     hallucination + cost view), save it as docs/assets/demo.gif, then uncomment: -->
-<!-- <p align="center"><img src="docs/assets/demo.gif" alt="Sentinel dashboard: trace waterfall, cost, and trust scoring" width="840"></p> -->
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="Sentinel dashboard: overview, trace waterfall with trust scoring, and the alert feed" width="840">
+</p>
 
 Spin up the whole stack and watch traces, cost, and trust scores populate live, no API keys required:
 
