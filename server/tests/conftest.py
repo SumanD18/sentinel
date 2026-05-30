@@ -7,7 +7,6 @@ import os
 # Force an in-memory SQLite DB before anything imports the app/config.
 os.environ.setdefault("SENTINEL_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
-import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
