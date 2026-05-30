@@ -1,0 +1,3 @@
+# Install the SDK from the monorepo, plus the OpenAI client.
+-e ../../packages/sdk-python
+openai>=1.0

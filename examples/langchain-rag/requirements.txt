@@ -1,0 +1,4 @@
+-e ../../packages/sdk-python
+langchain-openai>=0.1
+langchain-core>=0.2
+openai>=1.0

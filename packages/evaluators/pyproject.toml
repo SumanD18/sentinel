@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sentinel-evaluators"
+version = "0.1.0"
+description = "Local-first hallucination and anomaly evaluators for LLM outputs."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Sentinel contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+embeddings = ["sentence-transformers>=2.2"]
+dev = ["pytest>=7.4", "ruff>=0.3"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["sentinel_evaluators"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

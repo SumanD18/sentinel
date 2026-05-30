@@ -1,0 +1,59 @@
+# One-command Sentinel stack.
+#
+#   docker compose up --build        # SQLite-backed, dashboard on :3000
+#   docker compose --profile postgres up --build   # use Postgres instead
+#
+# The dashboard (nginx) proxies /api, /v1 and /metrics to the server, so the
+# browser only ever talks to a single origin.
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: sentinel/server:latest
+    environment:
+      # Default to SQLite on a named volume. Uncomment the Postgres URL and the
+      # `db` dependency below (or use --profile postgres) for Postgres.
+      SENTINEL_DATABASE_URL: ${SENTINEL_DATABASE_URL:-sqlite+aiosqlite:////data/sentinel.db}
+      SENTINEL_API_KEYS: ${SENTINEL_API_KEYS:-}
+      SENTINEL_CORS_ORIGINS: ${SENTINEL_CORS_ORIGINS:-*}
+      SENTINEL_LOG_LEVEL: ${SENTINEL_LOG_LEVEL:-INFO}
+    volumes:
+      - sentinel-data:/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    image: sentinel/dashboard:latest
+    depends_on:
+      - server
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+  # Optional Postgres backend. Enable with: docker compose --profile postgres up
+  db:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+    volumes:
+      - sentinel-pg:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sentinel-data:
+  sentinel-pg:
